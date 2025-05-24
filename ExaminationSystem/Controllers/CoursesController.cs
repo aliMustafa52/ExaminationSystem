@@ -39,6 +39,21 @@ namespace ExaminationSystem.Controllers
             return true;
         }
 
+        [HttpPut("")]
+        public async Task<bool> UpdateCourse(Course course)
+        {
+            //await _generalRepository.UpdateIncludeAsync(course, nameof(course.Name), nameof(course.Hours));
+            //or
+            await _generalRepository.UpdateAsync(c => c.Id == course.Id,
+                s => s
+                    .SetProperty(c => c.Name, "new name")
+                    .SetProperty(c => c.Hours, 50));
+
+
+            return true;
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCourse(int id, CancellationToken cancellationToken)
         {
