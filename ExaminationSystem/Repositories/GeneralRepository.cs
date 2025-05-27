@@ -1,6 +1,9 @@
 ﻿using ExaminationSystem.Data;
 using ExaminationSystem.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Query;
+using System.Linq.Expressions;
 
 namespace ExaminationSystem.Repositories
 {
@@ -46,11 +49,42 @@ namespace ExaminationSystem.Repositories
             return true;
         }
 
-        public async Task Update(int id)
+        public async Task<int> UpdateAsync(Expression<Func<T, bool>> predicate
+                ,Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setProperties)
         {
-            var res = await GetByIdWithTrackingAsync(id);
-            if (res is null)
+            var updatedRows = await _dbSet
+                    .Where(predicate)
+                    .ExecuteUpdateAsync(setProperties);
+            return updatedRows;
+        }
+
+        public async Task UpdateIncludeAsync(T entity, params string[] modifiedProperties)
+        {
+            if(!_dbSet.Any(x => x.Id == entity.Id))
                 return;
+
+            var local = _dbSet.Local.FirstOrDefault(x => x.Id == entity.Id);
+
+            EntityEntry entityEntry;
+            if(local is null)
+            {
+                entityEntry = _dbSet.Entry(entity);
+            }
+            else
+            {
+                entityEntry = _context.ChangeTracker
+                    .Entries<T>()
+                    .FirstOrDefault(x => x.Entity.Id == entity.Id);
+            }
+
+            foreach (var property in entityEntry.Properties)
+            {
+                if (modifiedProperties.Contains(property.Metadata.Name))
+                {
+                    property.CurrentValue = entity.GetType().GetProperty(property.Metadata.Name).GetValue(entity);
+                    property.IsModified = true;
+                }
+            }
 
             await _context.SaveChangesAsync();
         }
