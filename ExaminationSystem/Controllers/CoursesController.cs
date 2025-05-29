@@ -1,8 +1,8 @@
-﻿using ExaminationSystem.Data;
-using ExaminationSystem.Models;
+﻿using ExaminationSystem.Entities;
 using ExaminationSystem.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using PredicateExtensions;
+using System.Linq.Expressions;
 
 namespace ExaminationSystem.Controllers
 {
@@ -18,6 +18,36 @@ namespace ExaminationSystem.Controllers
             var courses = _generalRepository.GetAll();
 
             return Ok(courses);
+        }
+
+        [HttpGet("filter")]
+        public IActionResult Get(int? courseId, string? courseName, int? courseHours)
+        {
+            //PredicateBuilder
+
+            var predicate = predicateBuilder(courseId, courseName, courseHours);
+            var query = _generalRepository.Get(predicate);
+
+            return Ok(query.ToList());
+        }
+
+        private Expression<Func<Course, bool>> predicateBuilder(int? courseId, string? courseName, int? courseHours)
+        {
+            var predicate = PredicateExtensions.PredicateExtensions.Begin<Course>(true);
+            if (courseId.HasValue)
+            {
+                predicate = predicate.And(x => x.Id == courseId);
+            }
+            if (courseHours.HasValue)
+            {
+                predicate = predicate.And(x => x.Hours >= courseHours);
+            }
+            if (!string.IsNullOrEmpty(courseName))
+            {
+                predicate = predicate.And(x => x.Name == courseName);
+            }
+
+            return predicate;
         }
 
         [HttpGet("{id}")]

@@ -1,5 +1,5 @@
 ﻿using ExaminationSystem.Data;
-using ExaminationSystem.Models;
+using ExaminationSystem.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExaminationSystem.Repositories

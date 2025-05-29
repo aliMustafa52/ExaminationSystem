@@ -1,6 +1,6 @@
-﻿using ExaminationSystem.Models.Enums;
+﻿using ExaminationSystem.Entities.Enums;
 
-namespace ExaminationSystem.Models
+namespace ExaminationSystem.Entities
 {
     public class Exam : BaseModel
     {

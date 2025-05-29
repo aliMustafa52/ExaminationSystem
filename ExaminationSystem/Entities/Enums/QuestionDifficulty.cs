@@ -1,4 +1,4 @@
-﻿namespace ExaminationSystem.Models.Enums
+﻿namespace ExaminationSystem.Entities.Enums
 {
     public enum QuestionDifficulty
     {

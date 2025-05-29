@@ -1,5 +1,5 @@
 ﻿using ExaminationSystem.Data;
-using ExaminationSystem.Models;
+using ExaminationSystem.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
@@ -22,6 +22,11 @@ namespace ExaminationSystem.Repositories
         {
             return _dbSet
                 .Where(c => c.IsActive);
+        }
+
+        public IQueryable<T> Get(Expression<Func<T,bool>> expression)
+        {
+            return GetAll().Where(expression);
         }
 
         public async Task<T?> GetByIdAsync(int id)
