@@ -1,92 +1,69 @@
-﻿using ExaminationSystem.Entities;
-using ExaminationSystem.Repositories;
+﻿using Azure;
+using ExaminationSystem.Abstractions;
+using ExaminationSystem.Contracts.Courses;
+using ExaminationSystem.Services.CoursesService;
 using Microsoft.AspNetCore.Mvc;
-using PredicateExtensions;
-using System.Linq.Expressions;
 
 namespace ExaminationSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CoursesController(GeneralRepository<Course> generalRepository) : ControllerBase
+    public class CoursesController(ICourseService courseService) : ControllerBase
     {
-        private readonly GeneralRepository<Course> _generalRepository = generalRepository;
+        private readonly ICourseService _courseService = courseService;
 
         [HttpGet("")]
-        public IActionResult GetAll()
+        public async Task<ActionResult<IEnumerable<CourseResponse>>> GetAll()
         {
-            var courses = _generalRepository.GetAll();
+            var response = await _courseService.GetAllAsync();
 
-            return Ok(courses);
+            return Ok(response);
         }
 
         [HttpGet("filter")]
-        public IActionResult Get(int? courseId, string? courseName, int? courseHours)
+        public async Task<ActionResult<IEnumerable<CourseResponse>>> Get(int? courseId, string? courseName, int? courseHours)
         {
-            //PredicateBuilder
+            var response = await _courseService.GetAsync(courseId, courseName, courseHours);
 
-            var predicate = predicateBuilder(courseId, courseName, courseHours);
-            var query = _generalRepository.Get(predicate);
-
-            return Ok(query.ToList());
+            return Ok(response);
         }
 
-        private Expression<Func<Course, bool>> predicateBuilder(int? courseId, string? courseName, int? courseHours)
-        {
-            var predicate = PredicateExtensions.PredicateExtensions.Begin<Course>(true);
-            if (courseId.HasValue)
-            {
-                predicate = predicate.And(x => x.Id == courseId);
-            }
-            if (courseHours.HasValue)
-            {
-                predicate = predicate.And(x => x.Hours >= courseHours);
-            }
-            if (!string.IsNullOrEmpty(courseName))
-            {
-                predicate = predicate.And(x => x.Name == courseName);
-            }
-
-            return predicate;
-        }
-
+        
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<ActionResult<CourseResponse>> GetById([FromRoute] int id)
         {
-            var course = await _generalRepository.GetByIdAsync(id);
-            if(course is null)
-                return NotFound();
+            var result = await _courseService.GetByIdAsync(id);
 
-            return Ok(course);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : result.ToProblem();
         }
 
         [HttpPost("")]
-        public async Task<bool> AddCourse(Course course)
+        public async Task<ActionResult<CourseResponse>> AddCourse([FromBody] CourseRequest request)
         {
-            //await _context.Courses.AddAsync(course);
-            //await _context.SaveChangesAsync();
+            var result = await _courseService.AddCourseAsync(request);
 
-            return true;
+            return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.ToProblem();
         }
 
-        [HttpPut("")]
-        public async Task<bool> UpdateCourse(Course course)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCourse([FromRoute] int id,[FromBody] CourseRequest request)
         {
-            //await _generalRepository.UpdateIncludeAsync(course, nameof(course.Name), nameof(course.Hours));
-            //or
-            await _generalRepository.UpdateAsync(c => c.Id == course.Id,
-                s => s
-                    .SetProperty(c => c.Name, "new name")
-                    .SetProperty(c => c.Hours, 50));
+            var result = await _courseService.UpdateCourseAsync(id, request);
 
-
-            return true;
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
         }
 
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCourse(int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> DeleteCourse([FromRoute] int id, CancellationToken cancellationToken)
         {
+            /*
             // 1) Fetch + Remove
             //var course = await _context.Courses
             //                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -126,7 +103,13 @@ namespace ExaminationSystem.Controllers
             //course.IsActive = false;
             //await _context.SaveChangesAsync(cancellationToken);
 
-            return NoContent();
+            */
+
+            var result = await _courseService.DeleteCourseAsync(id, cancellationToken);
+
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
         }
     }
 }

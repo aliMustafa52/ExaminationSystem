@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 
 namespace ExaminationSystem.Repositories
 {
-    public class GeneralRepository<T> where T : BaseModel
+    public class GeneralRepository<T> : IGeneralRepository<T> where T : BaseModel 
     {
         private readonly AppDbContext _context;
         private readonly DbSet<T> _dbSet;
@@ -36,6 +36,19 @@ namespace ExaminationSystem.Repositories
 
             return course;
         }
+        public async Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[] includeProperties)
+        {
+            IQueryable<T> query = _dbSet;
+            foreach (var property in includeProperties)
+            {
+                query = _dbSet.Include(property);
+            }
+
+            var course = await query
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+
+            return course;
+        }
 
         public async Task<T?> GetByIdWithTrackingAsync(int id)
         {
@@ -46,12 +59,12 @@ namespace ExaminationSystem.Repositories
             return course;
         }
 
-        public async Task<bool> AddAsync(T t)
+        public async Task<T> AddAsync(T t)
         {
             await _dbSet.AddAsync(t);
             await _context.SaveChangesAsync();
 
-            return true;
+            return t;
         }
 
         public async Task<int> UpdateAsync(Expression<Func<T, bool>> predicate
@@ -94,14 +107,16 @@ namespace ExaminationSystem.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task Delete(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
             var res = await GetByIdWithTrackingAsync(id);
             if (res is null)
-                return;
+                return false;
 
             res.IsActive = false;
             await _context.SaveChangesAsync();
+
+            return true;
         }
     }
 }

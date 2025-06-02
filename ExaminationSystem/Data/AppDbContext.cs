@@ -1,11 +1,12 @@
 ﻿using ExaminationSystem.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
 namespace ExaminationSystem.Data
 {
     public class AppDbContext(DbContextOptions<AppDbContext> options) 
-        : DbContext(options)
+        : IdentityDbContext<AppUser>(options)
     {
         public required DbSet<Choice> Answers { get; set; }
         public required DbSet<Course> Courses { get; set; }

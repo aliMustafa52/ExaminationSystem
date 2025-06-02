@@ -1,0 +1,24 @@
+﻿using Microsoft.EntityFrameworkCore.Query;
+using System.Linq.Expressions;
+
+namespace ExaminationSystem.Repositories
+{
+    public interface IGeneralRepository<T> where T : class
+    {
+        IQueryable<T> GetAll();
+
+        IQueryable<T> Get(Expression<Func<T, bool>> expression);
+
+        Task<T?> GetByIdAsync(int id);
+        Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[] includeProperties);
+
+        Task<T?> GetByIdWithTrackingAsync(int id);
+
+        Task<T> AddAsync(T t);
+
+        Task<int> UpdateAsync(Expression<Func<T, bool>> predicate
+                , Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setProperties);
+
+        Task<bool> DeleteAsync(int id);
+    }
+}

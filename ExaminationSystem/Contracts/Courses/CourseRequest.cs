@@ -4,6 +4,7 @@
     (
         string Name,
         string Description,
-        int Hours
+        int Hours,
+        int InstructorId
     );
 }
