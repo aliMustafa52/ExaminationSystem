@@ -1,8 +1,11 @@
 ﻿using Azure;
 using ExaminationSystem.Abstractions;
 using ExaminationSystem.Contracts.Courses;
+using ExaminationSystem.Contracts.Instructors;
 using ExaminationSystem.Services.CoursesService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ExaminationSystem.Controllers
 {
@@ -18,6 +21,18 @@ namespace ExaminationSystem.Controllers
             var response = await _courseService.GetAllAsync();
 
             return Ok(response);
+        }
+
+        [HttpGet("my-courses")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<CourseResponse>>> GetOwned(CancellationToken cancellationToken)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _courseService.GetOwnCoursesAsync(instructorId, cancellationToken);
+
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : result.ToProblem();
         }
 
         [HttpGet("filter")]
@@ -40,19 +55,35 @@ namespace ExaminationSystem.Controllers
         }
 
         [HttpPost("")]
+        [Authorize]
         public async Task<ActionResult<CourseResponse>> AddCourse([FromBody] CourseRequest request)
         {
-            var result = await _courseService.AddCourseAsync(request);
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _courseService.AddCourseAsync(instructorId, request);
 
             return result.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
             : result.ToProblem();
         }
 
+        [HttpPut("assign-course-to-student")]
+        [Authorize]
+        public async Task<ActionResult<CourseResponse>> AssignCourseToStudent([FromBody] StudentCourseRequest request, CancellationToken cancellationToken = default)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _courseService.AssignCourseToStudent(instructorId, request.StudentId, request.CourseId, cancellationToken);
+
+            return result.IsSuccess
+            ? NoContent()
+            : result.ToProblem();
+        }
+
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> UpdateCourse([FromRoute] int id,[FromBody] CourseRequest request)
         {
-            var result = await _courseService.UpdateCourseAsync(id, request);
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _courseService.UpdateCourseAsync(id, instructorId, request);
 
             return result.IsSuccess
                 ? NoContent()
@@ -61,6 +92,7 @@ namespace ExaminationSystem.Controllers
 
 
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteCourse([FromRoute] int id, CancellationToken cancellationToken)
         {
             /*
@@ -104,8 +136,8 @@ namespace ExaminationSystem.Controllers
             //await _context.SaveChangesAsync(cancellationToken);
 
             */
-
-            var result = await _courseService.DeleteCourseAsync(id, cancellationToken);
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await _courseService.DeleteCourseAsync(id, instructorId, cancellationToken);
 
             return result.IsSuccess
                 ? NoContent()

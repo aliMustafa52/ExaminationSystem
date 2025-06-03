@@ -2,8 +2,11 @@
 using ExaminationSystem.Authentication;
 using ExaminationSystem.Contracts.Authentication;
 using ExaminationSystem.Entities;
+using ExaminationSystem.Entities.Enums;
 using ExaminationSystem.Errors;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Security.Cryptography;
 
@@ -86,12 +89,80 @@ namespace ExaminationSystem.Services.AuthsService
             return Result.Success(new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, newToken, expiresIn * 60, newRefreshTokne, refreshTokenExpiration));
         }
 
-        private static string GenerateRefreshToken()
+        public async Task<Result> RegisterAsync(RegisterRequest registerRequest, CancellationToken cancellationToken = default)
         {
-            var number = RandomNumberGenerator.GetBytes(64);
-            var token = Convert.ToBase64String(number);
+            //check if email exists 
+            var isEmailExists = await _userManager.Users.AnyAsync(u => u.Email == registerRequest.Email, cancellationToken);
+            if (isEmailExists)
+                return Result.Failure(UserErrors.UserDublicatedEmail);
 
-            return token;
+            var user = registerRequest.Adapt<AppUser>();
+
+            var result = await _userManager.CreateAsync(user, registerRequest.Password);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(
+                    new Error(error.Code, error.Description,
+                    StatusCodes.Status400BadRequest)
+                );
+            }
+
+            return Result.Success();
+        }
+
+        public async Task<Result> RegisterAsInstructorAsync(InstructorRegisterRequest registerRequest, CancellationToken cancellationToken = default)
+        {
+            //check if email exists 
+            var isEmailExists = await _userManager.Users.AnyAsync(u => u.Email == registerRequest.Email, cancellationToken);
+            if (isEmailExists)
+                return Result.Failure(UserErrors.UserDublicatedEmail);
+
+            var user = registerRequest.Adapt<AppUser>();
+            user.UserType = UserType.Instructor;
+            user.Instructor = new Instructor
+            {
+                Age = registerRequest.Age
+            };
+
+            var result = await _userManager.CreateAsync(user, registerRequest.Password);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(
+                    new Error(error.Code, error.Description,
+                    StatusCodes.Status400BadRequest)
+                );
+            }
+
+            return Result.Success();
+        }
+
+        public async Task<Result> RegisterAsStudentAsync(StudentRegisterRequest registerRequest, CancellationToken cancellationToken = default)
+        {
+            //check if email exists 
+            var isEmailExists = await _userManager.Users.AnyAsync(u => u.Email == registerRequest.Email, cancellationToken);
+            if (isEmailExists)
+                return Result.Failure(UserErrors.UserDublicatedEmail);
+
+            var user = registerRequest.Adapt<AppUser>();
+            user.UserType = UserType.Student;
+            user.Student = new Student
+            {
+                Address = registerRequest.Address
+            };
+
+            var result = await _userManager.CreateAsync(user, registerRequest.Password);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(
+                    new Error(error.Code, error.Description,
+                    StatusCodes.Status400BadRequest)
+                );
+            }
+
+            return Result.Success();
         }
 
         public async Task<Result> RevokeRefreshAsync(string token, string refreshToken, CancellationToken cancellationToken = default)
@@ -112,6 +183,14 @@ namespace ExaminationSystem.Services.AuthsService
             await _userManager.UpdateAsync(user);
 
             return Result.Success();
+        }
+
+        private static string GenerateRefreshToken()
+        {
+            var number = RandomNumberGenerator.GetBytes(64);
+            var token = Convert.ToBase64String(number);
+
+            return token;
         }
     }
 }

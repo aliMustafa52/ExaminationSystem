@@ -34,7 +34,7 @@ namespace ExaminationSystem.Controllers
         [HttpPost("")]
         public async Task<IActionResult> AddCourse([FromBody] InstructorRequest request)
         {
-            var response = await _instructorService.AddCourseAsync(request);
+            var response = await _instructorService.AddInstructorAsync(request);
 
             return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
         }
@@ -42,7 +42,7 @@ namespace ExaminationSystem.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCourse([FromRoute] int id, [FromBody] InstructorRequest request)
         {
-            var result = await _instructorService.UpdateCourseAsync(id, request);
+            var result = await _instructorService.UpdateInstructorAsync(id, request);
 
             return result.IsSuccess
                 ? NoContent()
@@ -53,7 +53,7 @@ namespace ExaminationSystem.Controllers
         public async Task<IActionResult> DeleteCourse([FromRoute] int id, CancellationToken cancellationToken)
         {
 
-            var result = await _instructorService.DeleteCourseAsync(id, cancellationToken);
+            var result = await _instructorService.DeleteInstructorAsync(id, cancellationToken);
 
             return result.IsSuccess
                 ? NoContent()

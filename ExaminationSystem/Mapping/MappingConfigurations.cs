@@ -1,4 +1,6 @@
-﻿using Mapster;
+﻿using ExaminationSystem.Contracts.Authentication;
+using ExaminationSystem.Entities;
+using Mapster;
 
 namespace ExaminationSystem.Mapping
 {
@@ -6,7 +8,14 @@ namespace ExaminationSystem.Mapping
     {
         public void Register(TypeAdapterConfig config)
         {
-            //config.NewConfig<>
+            config.NewConfig<RegisterRequest, AppUser>()
+                .Map(dest => dest.UserName, src => src.Email);
+
+            config.NewConfig<InstructorRegisterRequest, AppUser>()
+                .Map(dest => dest.UserName, src => src.Email);
+
+            config.NewConfig<StudentRegisterRequest, AppUser>()
+                .Map(dest => dest.UserName, src => src.Email);
         }
     }
 }

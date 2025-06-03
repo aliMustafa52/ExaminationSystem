@@ -8,9 +8,9 @@ namespace ExaminationSystem.Services.InstructorsService
         Task<IEnumerable<InstructorResponse>> GetAllAsync();
 
         Task<Result<InstructorResponseWithCourses>> GetByIdAsync(int id);
-        Task<InstructorResponse> AddCourseAsync(InstructorRequest request);
-        Task<Result> UpdateCourseAsync(int id, InstructorRequest request);
+        Task<InstructorResponse> AddInstructorAsync(InstructorRequest request);
+        Task<Result> UpdateInstructorAsync(int id, InstructorRequest request);
 
-        Task<Result> DeleteCourseAsync(int id, CancellationToken cancellationToken);
+        Task<Result> DeleteInstructorAsync(int id, CancellationToken cancellationToken);
     }
 }

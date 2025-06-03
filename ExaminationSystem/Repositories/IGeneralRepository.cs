@@ -20,5 +20,7 @@ namespace ExaminationSystem.Repositories
                 , Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setProperties);
 
         Task<bool> DeleteAsync(int id);
+
+        Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
     }
 }

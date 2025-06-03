@@ -14,6 +14,18 @@ namespace ExaminationSystem.Data.ModelsConfigurations
                 .WithOwner()
                 .HasForeignKey("UserId");
 
+            builder
+                .HasOne(u => u.Instructor)
+                .WithOne(a => a.AppUser)
+                .HasForeignKey<Instructor>(i => i.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder
+                .HasOne(u => u.Student)
+                .WithOne(a => a.AppUser)
+                .HasForeignKey<Student>(i => i.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Property(x => x.FirstName)
                 .HasMaxLength(100);
 

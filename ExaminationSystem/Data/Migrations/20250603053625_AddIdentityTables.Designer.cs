@@ -4,6 +4,7 @@ using ExaminationSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ExaminationSystem.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250603053625_AddIdentityTables")]
+    partial class AddIdentityTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -86,9 +89,6 @@ namespace ExaminationSystem.Data.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
-
-                    b.Property<int>("UserType")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -289,10 +289,6 @@ namespace ExaminationSystem.Data.Migrations
                     b.Property<int>("Age")
                         .HasColumnType("int");
 
-                    b.Property<string>("AppUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
@@ -302,6 +298,10 @@ namespace ExaminationSystem.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
@@ -309,9 +309,6 @@ namespace ExaminationSystem.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppUserId")
-                        .IsUnique();
 
                     b.ToTable("Instructors");
                 });
@@ -403,14 +400,6 @@ namespace ExaminationSystem.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AppUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
@@ -427,9 +416,6 @@ namespace ExaminationSystem.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppUserId")
-                        .IsUnique();
 
                     b.ToTable("Students");
                 });
@@ -791,17 +777,6 @@ namespace ExaminationSystem.Data.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("ExaminationSystem.Entities.Instructor", b =>
-                {
-                    b.HasOne("ExaminationSystem.Entities.AppUser", "AppUser")
-                        .WithOne("Instructor")
-                        .HasForeignKey("ExaminationSystem.Entities.Instructor", "AppUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AppUser");
-                });
-
             modelBuilder.Entity("ExaminationSystem.Entities.InstructorStudent", b =>
                 {
                     b.HasOne("ExaminationSystem.Entities.Instructor", "Instructor")
@@ -830,17 +805,6 @@ namespace ExaminationSystem.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Instructor");
-                });
-
-            modelBuilder.Entity("ExaminationSystem.Entities.Student", b =>
-                {
-                    b.HasOne("ExaminationSystem.Entities.AppUser", "AppUser")
-                        .WithOne("Student")
-                        .HasForeignKey("ExaminationSystem.Entities.Student", "AppUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AppUser");
                 });
 
             modelBuilder.Entity("ExaminationSystem.Entities.StudentAnswer", b =>
@@ -957,13 +921,6 @@ namespace ExaminationSystem.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("ExaminationSystem.Entities.AppUser", b =>
-                {
-                    b.Navigation("Instructor");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("ExaminationSystem.Entities.Choice", b =>

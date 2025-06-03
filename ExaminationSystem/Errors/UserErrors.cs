@@ -21,5 +21,11 @@ namespace ExaminationSystem.Errors
 
         public static readonly Error LockedOutUser =
             new("User.LockedOutUser", "LockedOutUser, Pleases try again after 5 mins", StatusCodes.Status401Unauthorized);
+
+        public static readonly Error UserDublicatedEmail =
+            new("User.DublicatedEmail", "This email is already exists", StatusCodes.Status409Conflict);
+
+        public static readonly Error UserIsNotAnInstructor =
+            new("User.IsNotAnInstructor", "This User Is Not An Instructor", StatusCodes.Status400BadRequest);
     }
 }

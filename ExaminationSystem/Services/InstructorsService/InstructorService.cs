@@ -31,7 +31,7 @@ namespace ExaminationSystem.Services.InstructorsService
             return Result.Success(instructorResponse);
         }
 
-        public async Task<InstructorResponse> AddCourseAsync(InstructorRequest request)
+        public async Task<InstructorResponse> AddInstructorAsync(InstructorRequest request)
         {
             var instructor = request.Adapt<Instructor>();
             var createdInstructor = await _generalRepository.AddAsync(instructor);
@@ -41,11 +41,11 @@ namespace ExaminationSystem.Services.InstructorsService
             return instructorResponse;
         }
 
-        public async Task<Result> UpdateCourseAsync(int id, InstructorRequest request)
+        public async Task<Result> UpdateInstructorAsync(int id, InstructorRequest request)
         {
             var updatedRows = await _generalRepository.UpdateAsync(c => c.Id == id,
                 s => s
-                    .SetProperty(c => c.Name, request.Name)
+                    //.SetProperty(c => c.Name, request.Name)
                     .SetProperty(c => c.Age, request.Age));
 
             if (updatedRows == 0)
@@ -54,7 +54,7 @@ namespace ExaminationSystem.Services.InstructorsService
             return Result.Success();
         }
 
-        public async Task<Result> DeleteCourseAsync(int id, CancellationToken cancellationToken)
+        public async Task<Result> DeleteInstructorAsync(int id, CancellationToken cancellationToken)
         {
             var isDeleted = await _generalRepository.DeleteAsync(id);
             if (!isDeleted)
@@ -62,5 +62,7 @@ namespace ExaminationSystem.Services.InstructorsService
 
             return Result.Success();
         }
+
+
     }
 }

@@ -9,5 +9,11 @@ namespace ExaminationSystem.Errors
 
         public static readonly Error CourseNotSaved =
             new("Course.NotSaved", "Cannot save course at the time", StatusCodes.Status400BadRequest);
+
+        public static readonly Error CourseNotModified =
+            new("Course.CannotModify", "Cannot Modify this course", StatusCodes.Status400BadRequest);
+
+        public static readonly Error StudentAlreadyEnrolled =
+            new("Course.StudentAlreadyEnrolled", "Student Already Enrolled to this course", StatusCodes.Status400BadRequest);
     }
 }

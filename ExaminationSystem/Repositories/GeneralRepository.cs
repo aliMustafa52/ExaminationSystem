@@ -3,6 +3,7 @@ using ExaminationSystem.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace ExaminationSystem.Repositories
@@ -117,6 +118,13 @@ namespace ExaminationSystem.Repositories
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            var isMatch = await _dbSet.AnyAsync(predicate, cancellationToken);
+
+            return isMatch;
         }
     }
 }
