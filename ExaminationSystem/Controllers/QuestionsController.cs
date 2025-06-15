@@ -1,6 +1,7 @@
 ﻿using ExaminationSystem.Abstractions;
 using ExaminationSystem.Contracts.Exams;
 using ExaminationSystem.Contracts.Questions;
+using ExaminationSystem.Services.ExamsService;
 using ExaminationSystem.Services.QuestionsService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,9 +13,10 @@ namespace ExaminationSystem.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class QuestionsController(IQuestionService questionService) : ControllerBase
+    public class QuestionsController(IQuestionService questionService, IExamService examService) : ControllerBase
     {
         private readonly IQuestionService _questionService = questionService;
+        private readonly IExamService _examService = examService;
 
         [HttpGet("")]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
@@ -70,6 +72,30 @@ namespace ExaminationSystem.Controllers
             var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
             var result = await _questionService.DeleteQuestionAsync(instructorId, id, cancellationToken);
+
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
+        }
+
+        [HttpPost("assign-to-exam")]
+        public async Task<IActionResult> AssignQuestionToExam([FromQuery] int examId, ExamQuestionsRequest request, CancellationToken cancellationToken)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.AssignQuestionToExam(examId, instructorId, request, cancellationToken);
+
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
+        }
+
+        [HttpPost("remove-from-exam")]
+        public async Task<IActionResult> RemoveQuestionFromExam([FromQuery] int examId, ExamQuestionsRequest request, CancellationToken cancellationToken)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.RemoveQuestionFromExam(examId, instructorId, request, cancellationToken);
 
             return result.IsSuccess
                 ? NoContent()

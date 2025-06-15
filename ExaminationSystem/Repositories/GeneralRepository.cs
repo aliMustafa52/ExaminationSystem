@@ -68,6 +68,21 @@ namespace ExaminationSystem.Repositories
             return t;
         }
 
+        public async Task<List<T>> AddRangeAsync(List<T> ts)
+        {
+            await _dbSet.AddRangeAsync(ts);
+            await _context.SaveChangesAsync();
+
+            return ts;
+        }
+        public async Task<List<T>> RemoveRangeAsync(List<T> ts)
+        {
+            _dbSet.RemoveRange(ts);
+            await _context.SaveChangesAsync();
+
+            return ts;
+        }
+
         public async Task<int> UpdateAsync(Expression<Func<T, bool>> predicate
                 ,Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setProperties)
         {
