@@ -4,7 +4,9 @@ using ExaminationSystem.Entities;
 using ExaminationSystem.Repositories;
 using ExaminationSystem.Services.AuthsService;
 using ExaminationSystem.Services.CoursesService;
+using ExaminationSystem.Services.ExamsService;
 using ExaminationSystem.Services.InstructorsService;
+using ExaminationSystem.Services.QuestionsService;
 using ExaminationSystem.Services.StudentsService;
 using FluentValidation;
 using Mapster;
@@ -42,6 +44,8 @@ namespace ExaminationSystem
             services.AddScoped<IInstructorService, InstructorService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IStudentService, StudentService>();
+            services.AddScoped<IExamService, ExamService>();
+            services.AddScoped<IQuestionService, QuestionService>();
 
             return services;
         }

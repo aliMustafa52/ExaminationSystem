@@ -8,6 +8,7 @@ namespace ExaminationSystem.Entities
         public string Description { get; set; } = string.Empty;
         public ExamType ExamType { get; set; }
         public double Duration { get; set; }
+        public int NumberOfQuestions { get; set; }
 
         public int CourseId { get; set; }
         public int InstructorId { get; set; }
