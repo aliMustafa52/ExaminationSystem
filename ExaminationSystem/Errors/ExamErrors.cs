@@ -15,5 +15,8 @@ namespace ExaminationSystem.Errors
 
         public static readonly Error StudentAlreadyEnrolled =
             new("Exam.StudentAlreadyEnrolled", "Student Already Enrolled to this Exam", StatusCodes.Status400BadRequest);
+
+        public static readonly Error StudentNotEnrolled =
+            new("Exam.StudentNotEnrolled", "Student Not Enrolled to this Exam", StatusCodes.Status400BadRequest);
     }
 }

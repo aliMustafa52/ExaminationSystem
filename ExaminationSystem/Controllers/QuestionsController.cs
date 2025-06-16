@@ -90,7 +90,7 @@ namespace ExaminationSystem.Controllers
                 : result.ToProblem();
         }
 
-        [HttpPost("remove-from-exam")]
+        [HttpDelete("remove-from-exam")]
         public async Task<IActionResult> RemoveQuestionFromExam([FromQuery] int examId, ExamQuestionsRequest request, CancellationToken cancellationToken)
         {
             var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;

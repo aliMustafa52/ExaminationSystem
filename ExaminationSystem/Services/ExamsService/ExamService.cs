@@ -1,6 +1,8 @@
 ﻿using ExaminationSystem.Abstractions;
+using ExaminationSystem.Contracts.Choices;
 using ExaminationSystem.Contracts.Courses;
 using ExaminationSystem.Contracts.Exams;
+using ExaminationSystem.Contracts.Questions;
 using ExaminationSystem.Entities;
 using ExaminationSystem.Entities.Enums;
 using ExaminationSystem.Errors;
@@ -16,12 +18,16 @@ namespace ExaminationSystem.Services.ExamsService
         IGeneralRepository<Course> courseRepository,
         IGeneralRepository<ExamQuestion> ExamQuestionRepository,
         IGeneralRepository<Question> QuestionRepository,
+        IGeneralRepository<Student> StudentRepository,
+        IGeneralRepository<StudentExam> StudentExamRepository,
         UserManager<AppUser> userManager) : IExamService
     {
         private readonly IGeneralRepository<Exam> _examRepository = examRepository;
         private readonly IGeneralRepository<Course> _courseRepository = courseRepository;
         private readonly IGeneralRepository<ExamQuestion> _examQuestionRepository = ExamQuestionRepository;
         private readonly IGeneralRepository<Question> _questionRepository = QuestionRepository;
+        private readonly IGeneralRepository<Student> _studentRepository = StudentRepository;
+        private readonly IGeneralRepository<StudentExam> _studentExamRepository = StudentExamRepository;
         private readonly UserManager<AppUser> _userManager = userManager;
 
         public async Task<Result<IEnumerable<ExamResponse>>> GetAllAsync(int courseId, CancellationToken cancellationToken = default)
@@ -43,13 +49,11 @@ namespace ExaminationSystem.Services.ExamsService
         public async Task<Result<IEnumerable<ExamResponse>>> GetAllForTeacherAsync(int courseId, string instructorId, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
-                    .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
-                    .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure<IEnumerable<ExamResponse>>(UserErrors.UserNotFound);
+                .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                .Select(u => u.Instructor)
+                .SingleOrDefaultAsync(cancellationToken);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
+            if (instructorUser is null || !instructorUser.IsActive)
                 return Result.Failure<IEnumerable<ExamResponse>>(InstructorErrors.InstructorNotFound);
 
             var isCourseExists = await _courseRepository.AnyAsync(c =>
@@ -58,7 +62,7 @@ namespace ExaminationSystem.Services.ExamsService
             if (!isCourseExists)
                 return Result.Failure<IEnumerable<ExamResponse>>(CourseErrors.CourseNotFound);
 
-            var exams = await _examRepository.Get(e => e.CourseId == courseId && e.InstructorId == instructorUser.Instructor.Id)
+            var exams = await _examRepository.Get(e => e.CourseId == courseId && e.InstructorId == instructorUser.Id)
                     .ToListAsync(cancellationToken);
 
             var response = exams.Adapt<IEnumerable<ExamResponse>>();
@@ -66,74 +70,103 @@ namespace ExaminationSystem.Services.ExamsService
             return Result.Success(response);
         }
 
-        public async Task<Result<ExamResponse>> GetByIdAsync(int courseId, int examId, CancellationToken cancellationToken = default)
+        public async Task<Result<ExamResponseWithQuestions>> GetByIdAsync(int courseId, int examId, CancellationToken cancellationToken = default)
         {
-            var isCourseExists = await _courseRepository.AnyAsync(c =>
-                    c.Id == courseId &&
-                    c.IsActive, cancellationToken);
-            if (!isCourseExists)
-                return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
+            //var isCourseExists = await _courseRepository.AnyAsync(c =>
+            //        c.Id == courseId &&
+            //        c.IsActive, cancellationToken);
+            //if (!isCourseExists)
+            //    return Result.Failure<ExamResponseWithQuestions>(CourseErrors.CourseNotFound);
 
-            var exam = await _examRepository.Get(e => e.Id == examId  && e.CourseId == courseId)
+            var exam = await _examRepository.Get(e => 
+                        e.Id == examId  && 
+                        e.CourseId == courseId &&
+                        e.Course.IsActive)
+                    .Select(e => new ExamResponseWithQuestions(
+                        e.Id,
+                        e.Name,
+                        e.Description,
+                        e.ExamType,
+                        e.Duration,
+                        e.NumberOfQuestions,
+                        e.CourseId,
+                        e.InstructorId,
+                        e.ExamQuestions.Select(x => new QuestionInExamResponse(
+                            x.Question.Id,
+                            x.Question.Text,
+                            x.Question.Choices.Select(z => new ChoiceInExamResponse(
+                                z.Id,
+                                z.Content
+                            ))
+                        ))
+                    ))
                     .FirstOrDefaultAsync(cancellationToken);
             if (exam is null)
-                return Result.Failure<ExamResponse>(ExamErrors.ExamNotFound);
+                return Result.Failure<ExamResponseWithQuestions>(ExamErrors.ExamNotFound);
 
-            var response = exam.Adapt<ExamResponse>();
-
-            return Result.Success(response);
+            return Result.Success(exam);
         }
 
-        public async Task<Result<ExamResponse>> GetByIdForTeacherAsync(int courseId, int examId, string instructorId, CancellationToken cancellationToken = default)
+        public async Task<Result<ExamResponseWithQuestions>> GetByIdForTeacherAsync(int courseId, int examId, string instructorId, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
-                    .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
-                    .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure<ExamResponse>(UserErrors.UserNotFound);
+                .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                .Select(u => u.Instructor)
+                .SingleOrDefaultAsync(cancellationToken);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
-                return Result.Failure<ExamResponse>(InstructorErrors.InstructorNotFound);
+            if (instructorUser is null || !instructorUser.IsActive)
+                return Result.Failure<ExamResponseWithQuestions>(InstructorErrors.InstructorNotFound);
 
-            var isCourseExists = await _courseRepository.AnyAsync(c =>
-                    c.Id == courseId &&
-                    c.IsActive, cancellationToken);
-            if (!isCourseExists)
-                return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
-
-            var exam = await _examRepository.Get(e => e.Id == examId && e.CourseId == courseId && e.InstructorId == instructorUser.Instructor.Id)
+            var exam = await _examRepository
+                    .Get(e => e.Id == examId &&
+                        e.CourseId == courseId &&
+                        e.Course.IsActive &&
+                        e.InstructorId == instructorUser.Id)
+                    .Select(e => new ExamResponseWithQuestions(
+                        e.Id,
+                        e.Name,
+                        e.Description,
+                        e.ExamType,
+                        e.Duration,
+                        e.NumberOfQuestions,
+                        e.CourseId,
+                        e.InstructorId,
+                        e.ExamQuestions.Select(x => new QuestionInExamResponse(
+                            x.Question.Id,
+                            x.Question.Text,
+                            x.Question.Choices.Select(z => new ChoiceInExamResponse(
+                                z.Id,
+                                z.Content
+                            ))
+                        ))
+                    ))
                     .FirstOrDefaultAsync(cancellationToken);
             if (exam is null)
-                return Result.Failure<ExamResponse>(ExamErrors.ExamNotFound);
+                return Result.Failure<ExamResponseWithQuestions>(ExamErrors.ExamNotFound);
 
-            var response = exam.Adapt<ExamResponse>();
-
-            return Result.Success(response);
+            return Result.Success(exam);
         }
 
         public async Task<Result<ExamResponse>> AddExamAsync(int courseId, string instructorId, AddExamRequest request, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
                     .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
                     .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure<ExamResponse>(UserErrors.UserNotFound);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
+            if (instructorUser is null || !instructorUser.IsActive)
                 return Result.Failure<ExamResponse>(InstructorErrors.InstructorNotFound);
 
             var isCourseExists = await _courseRepository.AnyAsync(c => 
                     c.Id == courseId &&
                     c.IsActive && 
-                    c.InstructorId == instructorUser.Instructor.Id, cancellationToken);
+                    c.InstructorId == instructorUser.Id, cancellationToken);
             if (!isCourseExists)
                 return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
 
             var exam = request.Adapt<Exam>();
             exam.CourseId = courseId;
-            exam.InstructorId = instructorUser.Instructor.Id;
+            exam.InstructorId = instructorUser.Id;
 
             var createdExam = await _examRepository.AddAsync(exam);
 
@@ -145,27 +178,25 @@ namespace ExaminationSystem.Services.ExamsService
         public async Task<Result> UpdateExamAsync(int courseId, int examId, string instructorId, UpdateExamRequest request, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
                     .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
                     .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure<ExamResponse>(UserErrors.UserNotFound);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
-                return Result.Failure<ExamResponse>(InstructorErrors.InstructorNotFound);
+            if (instructorUser is null || !instructorUser.IsActive)
+                return Result.Failure(InstructorErrors.InstructorNotFound);
 
             var isCourseExists = await _courseRepository.AnyAsync(c =>
                     c.Id == courseId &&
                     c.IsActive &&
-                    c.InstructorId == instructorUser.Instructor.Id, cancellationToken);
+                    c.InstructorId == instructorUser.Id, cancellationToken);
             if (!isCourseExists)
                 return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
 
-            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Instructor.Id && e.IsActive, cancellationToken);
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
             if(!isExamExists)
                 return Result.Failure<ExamResponse>(ExamErrors.ExamNotFound);
 
-            await _examRepository.UpdateAsync(e => e.Id == examId && e.InstructorId == instructorUser.Instructor.Id && e.IsActive,
+            await _examRepository.UpdateAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive,
                 s => s
                     .SetProperty(e => e.Name, request.Name)
                     .SetProperty(e => e.Description, request.Description)
@@ -178,23 +209,21 @@ namespace ExaminationSystem.Services.ExamsService
         public async Task<Result> DeleteExamAsync(int courseId, int examId, string instructorId, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
                     .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
                     .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure<ExamResponse>(UserErrors.UserNotFound);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
-                return Result.Failure<ExamResponse>(InstructorErrors.InstructorNotFound);
+            if (instructorUser is null || !instructorUser.IsActive)
+                return Result.Failure(InstructorErrors.InstructorNotFound);
 
             var isCourseExists = await _courseRepository.AnyAsync(c =>
                     c.Id == courseId &&
                     c.IsActive &&
-                    c.InstructorId == instructorUser.Instructor.Id, cancellationToken);
+                    c.InstructorId == instructorUser.Id, cancellationToken);
             if (!isCourseExists)
                 return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
 
-            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Instructor.Id && e.IsActive, cancellationToken);
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
             if (!isExamExists)
                 return Result.Failure<ExamResponse>(ExamErrors.ExamNotFound);
 
@@ -208,16 +237,14 @@ namespace ExaminationSystem.Services.ExamsService
         public async Task<Result> AssignQuestionToExam(int examId, string instructorId, ExamQuestionsRequest request, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
                     .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
                     .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure(UserErrors.UserNotFound);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
+            if (instructorUser is null || !instructorUser.IsActive)
                 return Result.Failure(InstructorErrors.InstructorNotFound);
 
-            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Instructor.Id && e.IsActive, cancellationToken);
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
             if (!isExamExists)
                 return Result.Failure(ExamErrors.ExamNotFound);
 
@@ -253,16 +280,14 @@ namespace ExaminationSystem.Services.ExamsService
         public async Task<Result> RemoveQuestionFromExam(int examId, string instructorId, ExamQuestionsRequest request, CancellationToken cancellationToken = default)
         {
             var instructorUser = await _userManager.Users
-                    .Include(x => x.Instructor)
                     .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
                     .SingleOrDefaultAsync(cancellationToken);
-            if (instructorUser is null)
-                return Result.Failure(UserErrors.UserNotFound);
 
-            if (instructorUser.Instructor is null || !instructorUser.Instructor.IsActive)
+            if (instructorUser is null || !instructorUser.IsActive)
                 return Result.Failure(InstructorErrors.InstructorNotFound);
 
-            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Instructor.Id && e.IsActive, cancellationToken);
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
             if (!isExamExists)
                 return Result.Failure(ExamErrors.ExamNotFound);
 
@@ -275,6 +300,68 @@ namespace ExaminationSystem.Services.ExamsService
 
 
             await _examQuestionRepository.RemoveRangeAsync(examQuestionsToRemove);
+
+            return Result.Success();
+        }
+
+        public async Task<Result> AssignExamToStudent(int examId, int studentId, string instructorId, CancellationToken cancellationToken = default)
+        {
+            var instructorUser = await _userManager.Users
+                    .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
+                    .SingleOrDefaultAsync(cancellationToken);
+
+            if (instructorUser is null || !instructorUser.IsActive)
+                return Result.Failure(InstructorErrors.InstructorNotFound);
+
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
+            if (!isExamExists)
+                return Result.Failure(ExamErrors.ExamNotFound);
+
+            var isStudentExists = await _studentRepository.AnyAsync(x => x.Id == studentId && x.IsActive, cancellationToken);
+            if(!isStudentExists)
+                return Result.Failure(StudentErrors.StudentNotFound);
+
+            var studentExam = await _studentExamRepository.Get(x => x.ExamId == examId && x.StudentId == studentId)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (studentExam is not null)
+                return Result.Failure(ExamErrors.StudentAlreadyEnrolled);
+
+            await _studentExamRepository.AddAsync(new StudentExam
+            {
+                ExamId = examId,
+                StudentId = studentId
+            });
+
+            return Result.Success();
+        }
+
+        public async Task<Result> RemoveExamFromStudent(int examId, int studentId, string instructorId, CancellationToken cancellationToken = default)
+        {
+            var instructorUser = await _userManager.Users
+                    .Where(u => u.Id == instructorId && u.UserType == UserType.Instructor && !u.IsDisabled)
+                    .Select(u => u.Instructor)
+                    .SingleOrDefaultAsync(cancellationToken);
+
+            if (instructorUser is null || !instructorUser.IsActive)
+                return Result.Failure(InstructorErrors.InstructorNotFound);
+
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.InstructorId == instructorUser.Id && e.IsActive, cancellationToken);
+            if (!isExamExists)
+                return Result.Failure(ExamErrors.ExamNotFound);
+
+            var isStudentExists = await _studentRepository.AnyAsync(x => x.Id == studentId && x.IsActive, cancellationToken);
+            if (!isStudentExists)
+                return Result.Failure(StudentErrors.StudentNotFound);
+
+            var studentExam= await _studentExamRepository.Get(x => x.ExamId == examId && x.StudentId == studentId)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if(studentExam is null)
+                return Result.Failure(ExamErrors.StudentNotEnrolled);
+
+            await _studentExamRepository.RemoveAsync(studentExam);
 
             return Result.Success();
         }

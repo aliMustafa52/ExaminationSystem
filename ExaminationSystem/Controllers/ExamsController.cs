@@ -1,5 +1,6 @@
 ﻿using ExaminationSystem.Abstractions;
 using ExaminationSystem.Contracts.Exams;
+using ExaminationSystem.Entities;
 using ExaminationSystem.Services.ExamsService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -90,6 +91,32 @@ namespace ExaminationSystem.Controllers
             var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
             var result = await _examService.DeleteExamAsync(courseId, id, instructorId, cancellationToken);
+
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
+        }
+
+        [HttpPost("{examId}/students")]
+        [Authorize]
+        public async Task<IActionResult> AssignExamToStudent([FromRoute] int examId, [FromQuery] int studentId, CancellationToken cancellationToken)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.AssignExamToStudent(examId, studentId, instructorId, cancellationToken);
+
+            return result.IsSuccess
+                ? NoContent()
+                : result.ToProblem();
+        }
+
+        [HttpDelete("{examId}/students")]
+        [Authorize]
+        public async Task<IActionResult> RemoveExamToStudent([FromRoute] int examId, [FromQuery] int studentId, CancellationToken cancellationToken)
+        {
+            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.AssignExamToStudent(examId, studentId, instructorId, cancellationToken);
 
             return result.IsSuccess
                 ? NoContent()

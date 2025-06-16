@@ -68,6 +68,14 @@ namespace ExaminationSystem.Repositories
             return t;
         }
 
+        public async Task<T> RemoveAsync(T t)
+        {
+            _dbSet.Remove(t);
+            await _context.SaveChangesAsync();
+
+            return t;
+        }
+
         public async Task<List<T>> AddRangeAsync(List<T> ts)
         {
             await _dbSet.AddRangeAsync(ts);

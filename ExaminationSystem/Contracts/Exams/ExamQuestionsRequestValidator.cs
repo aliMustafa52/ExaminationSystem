@@ -2,7 +2,7 @@
 
 namespace ExaminationSystem.Contracts.Exams
 {
-    public class ExamQuestionsRequestValidator : AbstractValidator<ExamQuestionRequest>
+    public class ExamQuestionsRequestValidator : AbstractValidator<ExamQuestionsRequest>
     {
         public ExamQuestionsRequestValidator()
         {

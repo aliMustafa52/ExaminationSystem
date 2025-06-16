@@ -1,8 +1,9 @@
-﻿using ExaminationSystem.Entities.Enums;
+﻿using ExaminationSystem.Contracts.Questions;
+using ExaminationSystem.Entities.Enums;
 
 namespace ExaminationSystem.Contracts.Exams
 {
-    public record ExamResponse
+    public record ExamResponseWithQuestions
     (
         int Id,
         string Name,
@@ -11,6 +12,7 @@ namespace ExaminationSystem.Contracts.Exams
         double Duration,
         int NumberOfQuestions,
         int CourseId,
-        int InstructorId
+        int InstructorId,
+        IEnumerable<QuestionInExamResponse> Questions
     );
 }

@@ -15,6 +15,7 @@ namespace ExaminationSystem.Repositories
         Task<T?> GetByIdWithTrackingAsync(int id);
 
         Task<T> AddAsync(T t);
+        Task<T> RemoveAsync(T t);
         Task<List<T>> AddRangeAsync(List<T> ts);
         Task<List<T>> RemoveRangeAsync(List<T> ts);
 
