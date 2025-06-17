@@ -37,6 +37,18 @@ namespace ExaminationSystem.Controllers
                 : result.ToProblem();
         }
 
+        [HttpGet("~/api/[controller]/for-student")]
+        [Authorize]
+        public async Task<IActionResult> GetAllForStudent(CancellationToken cancellationToken)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.GetAllForStudentAsync(studentId, cancellationToken);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : result.ToProblem();
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById([FromRoute] int courseId, [FromRoute] int id)
         {
@@ -55,6 +67,30 @@ namespace ExaminationSystem.Controllers
             var result = await _examService.GetByIdForTeacherAsync(courseId, id, instructorId, cancellationToken);
             return result.IsSuccess
                 ? Ok(result.Value)
+                : result.ToProblem();
+        }
+
+        [HttpGet("~/api/[controller]/{id}/for-student")]
+        [Authorize]
+        public async Task<IActionResult> GetByIdForStudent([FromRoute] int id, CancellationToken cancellationToken)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.GetByIdForStudentAsync(id, studentId, cancellationToken);
+            return result.IsSuccess
+                ? Ok(result.Value)
+                : result.ToProblem();
+        }
+
+        [HttpPost("~/api/[controller]/{id}/assign-random-questions")]
+        [Authorize]
+        public async Task<IActionResult> AssignRandomQuestions([FromRoute] int id, [FromBody] AutoExamQuestionsRequest request, CancellationToken cancellationToken)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.AssignRandomQuestionsToExam(id, studentId, request, cancellationToken);
+            return result.IsSuccess
+                ? NoContent()
                 : result.ToProblem();
         }
 
@@ -97,30 +133,6 @@ namespace ExaminationSystem.Controllers
                 : result.ToProblem();
         }
 
-        [HttpPost("{examId}/students")]
-        [Authorize]
-        public async Task<IActionResult> AssignExamToStudent([FromRoute] int examId, [FromQuery] int studentId, CancellationToken cancellationToken)
-        {
-            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-            var result = await _examService.AssignExamToStudent(examId, studentId, instructorId, cancellationToken);
-
-            return result.IsSuccess
-                ? NoContent()
-                : result.ToProblem();
-        }
-
-        [HttpDelete("{examId}/students")]
-        [Authorize]
-        public async Task<IActionResult> RemoveExamToStudent([FromRoute] int examId, [FromQuery] int studentId, CancellationToken cancellationToken)
-        {
-            var instructorId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-            var result = await _examService.AssignExamToStudent(examId, studentId, instructorId, cancellationToken);
-
-            return result.IsSuccess
-                ? NoContent()
-                : result.ToProblem();
-        }
+        
     }
 }
