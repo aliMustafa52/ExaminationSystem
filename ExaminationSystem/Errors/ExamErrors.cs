@@ -25,8 +25,11 @@ namespace ExaminationSystem.Errors
         public static readonly Error ExamOnlyOneFinal =
             new("Exam.OnlyOneFinal", "Final exam for this course is already exists", StatusCodes.Status400BadRequest);
 
-        public static readonly Error ExamQuestionMismatch =
-            new("Exam.QuestionMismatch", "Exam isn't ready yet (Assign more questions)", StatusCodes.Status400BadRequest);
+        public static readonly Error ExamNotFullWithQuestions =
+            new("Exam.NotFullWithQuestions", "Exam isn't ready yet (Assign more questions)", StatusCodes.Status400BadRequest);
+
+        public static readonly Error ExamQuestionsMismatch =
+            new("Exam.QuestiosMismatch", "Sent Questions don't match this exam questions", StatusCodes.Status400BadRequest);
 
         public static readonly Error ExamQuestionNumberMismatch =
             new("Exam.QuestionNumberMismatch", "Sent Number Of Questions are diffent from Exam Number of questions", StatusCodes.Status400BadRequest);
@@ -39,5 +42,8 @@ namespace ExaminationSystem.Errors
 
         public static readonly Error ExamInsufficientHardQuestions =
             new("Exam.InsufficientHardQuestions", "Not Enough Hard Questions", StatusCodes.Status400BadRequest);
+
+        public static readonly Error ExamNotAssignedToStudent =
+            new("Exam.Not Assigned To Student", "This Exam is Not Assigned To this Student", StatusCodes.Status400BadRequest);
     }
 }

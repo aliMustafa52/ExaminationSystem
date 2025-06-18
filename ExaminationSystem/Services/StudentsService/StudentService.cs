@@ -1,4 +1,5 @@
-﻿using ExaminationSystem.Contracts.Instructors;
+﻿using ExaminationSystem.Abstractions;
+using ExaminationSystem.Contracts.Instructors;
 using ExaminationSystem.Contracts.Students;
 using ExaminationSystem.Entities;
 using ExaminationSystem.Entities.Enums;

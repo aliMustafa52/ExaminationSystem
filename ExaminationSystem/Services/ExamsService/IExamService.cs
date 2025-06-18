@@ -28,5 +28,9 @@ namespace ExaminationSystem.Services.ExamsService
         Task<Result> AssignExamToStudent(int examId, int studentId, string instructorId, CancellationToken cancellationToken = default);
 
         Task<Result> RemoveExamFromStudent(int examId, int studentId, string instructorId, CancellationToken cancellationToken = default);
+
+        Task<Result> SubmitExam(int examId, string studentId, SubmitExamRequest request, CancellationToken cancellationToken = default);
+
+        Task<Result<ExamReviewResponse>> GetExamReview(int examId, string studentId, CancellationToken cancellationToken = default);
     }
 }

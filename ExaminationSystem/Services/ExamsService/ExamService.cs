@@ -20,6 +20,7 @@ namespace ExaminationSystem.Services.ExamsService
         IGeneralRepository<Question> QuestionRepository,
         IGeneralRepository<Student> StudentRepository,
         IGeneralRepository<StudentExam> StudentExamRepository,
+        IGeneralRepository<Choice> ChoiceRepository,
         UserManager<AppUser> userManager) : IExamService
     {
         private readonly IGeneralRepository<Exam> _examRepository = examRepository;
@@ -28,6 +29,7 @@ namespace ExaminationSystem.Services.ExamsService
         private readonly IGeneralRepository<Question> _questionRepository = QuestionRepository;
         private readonly IGeneralRepository<Student> _studentRepository = StudentRepository;
         private readonly IGeneralRepository<StudentExam> _studentExamRepository = StudentExamRepository;
+        private readonly IGeneralRepository<Choice> _choiceRepository = ChoiceRepository;
         private readonly UserManager<AppUser> _userManager = userManager;
 
         public async Task<Result<IEnumerable<ExamResponse>>> GetAllAsync(int courseId, CancellationToken cancellationToken = default)
@@ -444,7 +446,7 @@ namespace ExaminationSystem.Services.ExamsService
                 return Result.Failure(ExamErrors.ExamIsEmpty);
 
             if (examToAssign.ActualQuestionCount != examToAssign.Exam.NumberOfQuestions)
-                return Result.Failure(ExamErrors.ExamQuestionMismatch);
+                return Result.Failure(ExamErrors.ExamNotFullWithQuestions);
 
             var isStudentExists = await _studentRepository.AnyAsync(x => x.Id == studentId && x.IsActive, cancellationToken);
             if(!isStudentExists)
@@ -490,22 +492,158 @@ namespace ExaminationSystem.Services.ExamsService
             return Result.Success();
         }
 
-        //public async Task<Result> SubmitExam(int examId, string studentId, SubmitExamRequest request, CancellationToken cancellationToken = default)
-        //{
-        //    var studentResult = await GetAndValidateStudentAsync(studentId, cancellationToken);
-        //    if (studentResult.IsFailure)
-        //        return Result.Failure<ExamResponseWithQuestions>(studentResult.Error);
+        public async Task<Result> SubmitExam(int examId, string studentId, SubmitExamRequest request, CancellationToken cancellationToken = default)
+        {
+            // Validate Student Existence
+            var studentResult = await GetAndValidateStudentAsync(studentId, cancellationToken);
+            if (studentResult.IsFailure)
+                return Result.Failure(studentResult.Error);
 
-        //    var exam = await _examRepository.Get(e => e.Id == examId && e.IsActive)
-        //            .Select(e => new
-        //            {
-        //                questionIds = e.ExamQuestions.Select(eq => eq.Id),
-        //                correctChoiceIds = e.ExamQuestions.SelectMany(eq => eq.Question.Choices.Select(c => c.IsCorrect))
-        //            })
-        //            .SingleOrDefaultAsync(cancellationToken);
-        //    if (exam is null)
-        //        return Result.Failure(ExamErrors.ExamNotFound);
-        //}
+            //Validate Exam Existence
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.IsActive, cancellationToken);
+            if (!isExamExists)
+                return Result.Failure(ExamErrors.ExamNotFound);
+
+            //Validate Exam Assignment
+            var studentExam = await _studentExamRepository.Get(se =>
+                    se.ExamId == examId &&
+                    se.StudentId == studentResult.Value.Id &&
+                    se.IsActive)
+                    .SingleOrDefaultAsync(cancellationToken);
+            if (studentExam is null)
+                return Result.Failure(ExamErrors.ExamNotAssignedToStudent);
+
+            if (studentExam.Score is not null)
+                return Result.Failure(StudentErrors.StudentSubmitedExamBefore);
+
+            var isExamAssignedToStudent = await _studentExamRepository.AnyAsync(se => 
+                se.ExamId == examId &&
+                se.StudentId == studentResult.Value.Id &&
+                se.IsActive, cancellationToken);
+            if (!isExamAssignedToStudent)
+                return Result.Failure(ExamErrors.ExamNotAssignedToStudent);
+
+            //Did this student submit an answer for this exam before?
+            var isStudentSubmitThisExamBefore = await _studentExamRepository.AnyAsync(x => x.StudentId == studentResult.Value.Id && x.Answers.Count != 0 && x.ExamId == examId, cancellationToken);
+            if (isStudentSubmitThisExamBefore)
+                return Result.Failure(StudentErrors.StudentSubmitedExamBefore);
+
+            //Validate Question Integrity
+            //number of sent question equal to exam number of questions
+            var expectedQuestionIds = await _examQuestionRepository.Get(eq => eq.ExamId == examId && eq.IsActive)
+                                .Select(eq => eq.Question.Id)
+                                .ToListAsync(cancellationToken);
+
+            var sentQuestionIds = request.SubmitQuestions
+                    .Select(sq => sq.QuestionId)
+                    .ToHashSet();
+
+            if(sentQuestionIds.Count != expectedQuestionIds.Count || !sentQuestionIds.All(sqId => expectedQuestionIds.Contains(sqId)))
+                return Result.Failure(ExamErrors.ExamQuestionsMismatch);
+
+            //Score Calculation and add student answers
+            var correctAnswersMap = await _choiceRepository.Get(c => c.IsCorrect && c.Question.ExamQuestions.Any(x => x.ExamId == examId))
+                .ToDictionaryAsync(choice => choice.QuestionId, choice => choice.Id ,cancellationToken);
+
+            var score = 0;
+            var studentAnswers = new List<StudentAnswer>();
+            foreach (var submitQuestion in request.SubmitQuestions)
+            {
+                if (correctAnswersMap.ContainsKey(submitQuestion.QuestionId))
+                {
+                    var isChoiceCorrect = correctAnswersMap[submitQuestion.QuestionId] == submitQuestion.ChoiceId;
+                    if (isChoiceCorrect)
+                        score++;
+
+                    var newAnswer = new StudentAnswer
+                    {
+                        QuestionId = submitQuestion.QuestionId,
+                        ChoiceId = submitQuestion.ChoiceId,
+                        IsCorrect = isChoiceCorrect
+                    };
+                    studentAnswers.Add(newAnswer);
+                }
+            }
+
+            //Record the Results
+            await _studentExamRepository.UpdateAsync(x => x.StudentId == studentResult.Value.Id && x.ExamId == examId,
+                    s => s
+                    .SetProperty(x => x.Answers, studentAnswers)
+                    .SetProperty(x => x.Score, score)
+                    );
+
+            return Result.Success();
+        }
+
+        public async Task<Result<ExamReviewResponse>> GetExamReview(int examId, string studentId, CancellationToken cancellationToken = default)
+        {
+            // Validate Student Existence
+            var studentResult = await GetAndValidateStudentAsync(studentId, cancellationToken);
+            if (studentResult.IsFailure)
+                return Result.Failure<ExamReviewResponse>(studentResult.Error);
+
+            //Validate Exam Existence
+            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.IsActive, cancellationToken);
+            if (!isExamExists)
+                return Result.Failure<ExamReviewResponse>(ExamErrors.ExamNotFound);
+
+            //Validate Exam Assignment
+            var studentExam = await _studentExamRepository.Get(se =>
+                    se.ExamId == examId &&
+                    se.StudentId == studentResult.Value.Id &&
+                    se.IsActive)
+                .Include(se => se.Answers)
+                    .SingleOrDefaultAsync(cancellationToken);
+            if (studentExam is null)
+                return Result.Failure<ExamReviewResponse>(ExamErrors.ExamNotAssignedToStudent);
+
+            if (studentExam.Score is null)
+                return Result.Failure<ExamReviewResponse>(StudentErrors.StudentNotYetSubmittedForReview);
+
+            var exam = await _examRepository.Get(e => e.Id == examId)
+                .Include(e => e.ExamQuestions)
+                    .ThenInclude(eq => eq.Question)
+                    .ThenInclude(eq => eq.Choices)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (exam is null)
+                return Result.Failure<ExamReviewResponse>(ExamErrors.ExamNotFound);
+
+            var studentAnswersLookup = studentExam.Answers
+                        .ToDictionary(a => a.QuestionId);
+
+            var correctChoicesLookup = exam.ExamQuestions
+                        .Select(eq => eq.Question.Choices.Single(c => c.IsCorrect))
+                        .ToDictionary(c => c.QuestionId, c => c.Id);
+
+            var reviewedQuestions = new List<ReviewedQuestionResponse>();
+            foreach(var examQuestion in exam.ExamQuestions)
+            {
+                var question = examQuestion.Question;
+                var studentAnswer = studentAnswersLookup[question.Id];
+
+                reviewedQuestions.Add(new ReviewedQuestionResponse(
+                        question.Id,
+                        question.Text,
+                        studentAnswer.ChoiceId,
+                        correctChoicesLookup[question.Id],
+                        studentAnswer.IsCorrect,
+                        question.Choices.Select(c => new ChoiceInExamResponse(
+                            c.Id,
+                            c.Content
+                        )).ToList()
+                ));
+            }
+
+            var response = new ExamReviewResponse(
+                exam.Id,
+                exam.Name,
+                studentExam.Score.Value,
+                reviewedQuestions
+            );
+
+            return Result.Success(response);
+        }
 
         private async Task<Result<Instructor>> GetAndValidateInstructorAsync(string instructorId, CancellationToken cancellationToken)
         {
