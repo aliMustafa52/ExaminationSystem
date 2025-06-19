@@ -95,8 +95,8 @@ namespace ExaminationSystem.Services.ExamsService
             //if (!isCourseExists)
             //    return Result.Failure<ExamResponseWithQuestions>(CourseErrors.CourseNotFound);
 
-            var exam = await _examRepository.Get(e => 
-                        e.Id == examId  && 
+            var exam = await _examRepository.Get(e =>
+                        e.Id == examId &&
                         e.CourseId == courseId &&
                         e.Course.IsActive)
                     .Select(e => new ExamResponseWithQuestions(
@@ -203,22 +203,22 @@ namespace ExaminationSystem.Services.ExamsService
             if (instructorResult.IsFailure)
                 return Result.Failure<ExamResponse>(instructorResult.Error);
 
-            var isCourseExists = await _courseRepository.AnyAsync(c => 
+            var isCourseExists = await _courseRepository.AnyAsync(c =>
                     c.Id == courseId &&
-                    c.IsActive && 
+                    c.IsActive &&
                     c.InstructorId == instructorResult.Value.Id, cancellationToken);
             if (!isCourseExists)
                 return Result.Failure<ExamResponse>(CourseErrors.CourseNotFound);
 
             //check if final already exists
-            if(request.ExamType == ExamType.Final)
+            if (request.ExamType == ExamType.Final)
             {
-                var isFinalExists = await _examRepository.AnyAsync(e => 
+                var isFinalExists = await _examRepository.AnyAsync(e =>
                         e.ExamType == ExamType.Final &&
                         e.InstructorId == instructorResult.Value.Id &&
                         e.CourseId == courseId &&
                         e.IsActive, cancellationToken);
-                if(isFinalExists)
+                if (isFinalExists)
                     return Result.Failure<ExamResponse>(ExamErrors.ExamOnlyOneFinal);
             }
 
@@ -250,7 +250,7 @@ namespace ExaminationSystem.Services.ExamsService
                     e.CourseId == courseId &&
                     e.InstructorId == instructorResult.Value.Id &&
                     e.IsActive, cancellationToken);
-            if(!isExamExists)
+            if (!isExamExists)
                 return Result.Failure<ExamResponse>(ExamErrors.ExamNotFound);
 
             await _examRepository.UpdateAsync(e => e.Id == examId && e.InstructorId == instructorResult.Value.Id && e.IsActive,
@@ -306,7 +306,7 @@ namespace ExaminationSystem.Services.ExamsService
                         .ToListAsync(cancellationToken);
 
             var invalidQuestionIds = request.QuestionIds.Except(validQuestionIds);
-            if(invalidQuestionIds.Any())
+            if (invalidQuestionIds.Any())
                 return Result.Failure(QuestionErrors.QuestionNotFound);
 
             //Prevent Duplicate Entries
@@ -318,7 +318,7 @@ namespace ExaminationSystem.Services.ExamsService
 
             var examQuestions = new List<ExamQuestion>();
 
-            foreach(var questionId in newQuestionIds)
+            foreach (var questionId in newQuestionIds)
             {
                 examQuestions.Add(new ExamQuestion { ExamId = examId, QuestionId = questionId });
                 //await _examQuestionRepository.AddAsync(new ExamQuestion { ExamId = examId, QuestionId = questionId });
@@ -343,7 +343,7 @@ namespace ExaminationSystem.Services.ExamsService
             var examQuestionsToRemove = await _examQuestionRepository.Get(e => e.ExamId == examId && request.QuestionIds.Contains(e.QuestionId))
                                 .ToListAsync(cancellationToken);
 
-            if(examQuestionsToRemove.Count == 0)
+            if (examQuestionsToRemove.Count == 0)
                 return Result.Success();
 
 
@@ -375,7 +375,7 @@ namespace ExaminationSystem.Services.ExamsService
             // Step 3: Validate that the request's question counts match the exam's configuration.
             //is sent number of questions the same as actual number of questions
             var totalSentQuestions = request.MediumQuestions + request.EasyQuestions + request.HardQuestions;
-            if(exam.NumberOfQuestions != totalSentQuestions)
+            if (exam.NumberOfQuestions != totalSentQuestions)
                 return Result.Failure(ExamErrors.ExamQuestionNumberMismatch);
 
             // Step 4: Prepare tasks to fetch random question IDs for each difficulty level.
@@ -433,13 +433,13 @@ namespace ExaminationSystem.Services.ExamsService
             if (instructorResult.IsFailure)
                 return Result.Failure(instructorResult.Error);
 
-            var examToAssign = await _examRepository.Get(e => 
+            var examToAssign = await _examRepository.Get(e =>
                     e.Id == examId &&
                     e.InstructorId == instructorResult.Value.Id &&
                     e.IsActive)
-                .Select(e => new {Exam = e, ActualQuestionCount = e.ExamQuestions.Count()})
+                .Select(e => new { Exam = e, ActualQuestionCount = e.ExamQuestions.Count() })
                 .FirstOrDefaultAsync(cancellationToken);
-            if(examToAssign is null)
+            if (examToAssign is null)
                 return Result.Failure(ExamErrors.ExamNotFound);
 
             if (examToAssign.ActualQuestionCount == 0)
@@ -449,7 +449,7 @@ namespace ExaminationSystem.Services.ExamsService
                 return Result.Failure(ExamErrors.ExamNotFullWithQuestions);
 
             var isStudentExists = await _studentRepository.AnyAsync(x => x.Id == studentId && x.IsActive, cancellationToken);
-            if(!isStudentExists)
+            if (!isStudentExists)
                 return Result.Failure(StudentErrors.StudentNotFound);
 
             var studentExam = await _studentExamRepository.Get(x => x.ExamId == examId && x.StudentId == studentId)
@@ -481,10 +481,10 @@ namespace ExaminationSystem.Services.ExamsService
             if (!isStudentExists)
                 return Result.Failure(StudentErrors.StudentNotFound);
 
-            var studentExam= await _studentExamRepository.Get(x => x.ExamId == examId && x.StudentId == studentId)
+            var studentExam = await _studentExamRepository.Get(x => x.ExamId == examId && x.StudentId == studentId)
                 .SingleOrDefaultAsync(cancellationToken);
 
-            if(studentExam is null)
+            if (studentExam is null)
                 return Result.Failure(ExamErrors.StudentNotEnrolled);
 
             await _studentExamRepository.RemoveAsync(studentExam);
@@ -500,23 +500,22 @@ namespace ExaminationSystem.Services.ExamsService
                 return Result.Failure(studentResult.Error);
 
             //Validate Exam Existence
-            var isExamExists = await _examRepository.AnyAsync(e => e.Id == examId && e.IsActive, cancellationToken);
-            if (!isExamExists)
-                return Result.Failure(ExamErrors.ExamNotFound);
 
             //Validate Exam Assignment
             var studentExam = await _studentExamRepository.Get(se =>
                     se.ExamId == examId &&
                     se.StudentId == studentResult.Value.Id &&
                     se.IsActive)
-                    .SingleOrDefaultAsync(cancellationToken);
+                .Include(se => se.Answers)
+                .AsTracking()
+                .SingleOrDefaultAsync(cancellationToken);
             if (studentExam is null)
                 return Result.Failure(ExamErrors.ExamNotAssignedToStudent);
 
             if (studentExam.Score is not null)
                 return Result.Failure(StudentErrors.StudentSubmitedExamBefore);
 
-            var isExamAssignedToStudent = await _studentExamRepository.AnyAsync(se => 
+            var isExamAssignedToStudent = await _studentExamRepository.AnyAsync(se =>
                 se.ExamId == examId &&
                 se.StudentId == studentResult.Value.Id &&
                 se.IsActive, cancellationToken);
@@ -528,49 +527,72 @@ namespace ExaminationSystem.Services.ExamsService
             if (isStudentSubmitThisExamBefore)
                 return Result.Failure(StudentErrors.StudentSubmitedExamBefore);
 
-            //Validate Question Integrity
-            //number of sent question equal to exam number of questions
-            var expectedQuestionIds = await _examQuestionRepository.Get(eq => eq.ExamId == examId && eq.IsActive)
-                                .Select(eq => eq.Question.Id)
-                                .ToListAsync(cancellationToken);
 
+            var exam = await _examRepository.Get(eq => eq.Id == examId && eq.IsActive)
+                                .Include(e => e.ExamQuestions)
+                                    .ThenInclude(eq => eq.Question)
+                                        .ThenInclude(q => q.Choices)
+                                .SingleOrDefaultAsync(cancellationToken);
+
+            //Validate Exam Existence
+            if (exam is null)
+                return Result.Failure(ExamErrors.ExamNotFound);
+
+            //Validate Questions Integrity
+            var expectedQuestionIds = exam.ExamQuestions
+                .Select(eq => eq.Question.Id)
+                .ToHashSet();
             var sentQuestionIds = request.SubmitQuestions
-                    .Select(sq => sq.QuestionId)
-                    .ToHashSet();
+                .Select(sq => sq.QuestionId)
+                .ToHashSet();
 
-            if(sentQuestionIds.Count != expectedQuestionIds.Count || !sentQuestionIds.All(sqId => expectedQuestionIds.Contains(sqId)))
+            //SetEquals >> order does not matter 
+            if (!sentQuestionIds.SetEquals(expectedQuestionIds))
                 return Result.Failure(ExamErrors.ExamQuestionsMismatch);
 
+            //Validate choices Integrity
+            var validChoicesIdsForExam = exam.ExamQuestions
+                .SelectMany(eq => eq.Question.Choices)
+                .Select(x => x.Id)
+                .ToHashSet();
+
+            var sentChoiceIds = request.SubmitQuestions
+                .Select(sq => sq.ChoiceId)
+                .ToHashSet();
+
+            //IsSubsetOf >>>>>>> all elements in the current set exist in the other collection + order does not matter
+            if (!sentChoiceIds.IsSubsetOf(validChoicesIdsForExam))
+                return Result.Failure(ExamErrors.ExamInvalidChoiceSubmitted);
+
             //Score Calculation and add student answers
-            var correctAnswersMap = await _choiceRepository.Get(c => c.IsCorrect && c.Question.ExamQuestions.Any(x => x.ExamId == examId))
-                .ToDictionaryAsync(choice => choice.QuestionId, choice => choice.Id ,cancellationToken);
+            var correctAnswersMap = exam.ExamQuestions
+                .Select(eq => eq.Question.Choices.Single(c => c.IsCorrect))
+                .ToDictionary(c => c.QuestionId, c => c.Id);
 
             var score = 0;
             var studentAnswers = new List<StudentAnswer>();
             foreach (var submitQuestion in request.SubmitQuestions)
             {
-                if (correctAnswersMap.ContainsKey(submitQuestion.QuestionId))
-                {
-                    var isChoiceCorrect = correctAnswersMap[submitQuestion.QuestionId] == submitQuestion.ChoiceId;
-                    if (isChoiceCorrect)
-                        score++;
+                var isChoiceCorrect = correctAnswersMap[submitQuestion.QuestionId] == submitQuestion.ChoiceId;
+                if (isChoiceCorrect)
+                    score++;
 
-                    var newAnswer = new StudentAnswer
-                    {
-                        QuestionId = submitQuestion.QuestionId,
-                        ChoiceId = submitQuestion.ChoiceId,
-                        IsCorrect = isChoiceCorrect
-                    };
-                    studentAnswers.Add(newAnswer);
-                }
+                var newAnswer = new StudentAnswer
+                {
+                    QuestionId = submitQuestion.QuestionId,
+                    ChoiceId = submitQuestion.ChoiceId,
+                    IsCorrect = isChoiceCorrect
+                };
+                studentAnswers.Add(newAnswer);
+            }
+            studentExam.Score = score;
+            studentExam.Answers.Clear();
+            foreach (var answer in studentAnswers)
+            {
+                studentExam.Answers.Add(answer);
             }
 
-            //Record the Results
-            await _studentExamRepository.UpdateAsync(x => x.StudentId == studentResult.Value.Id && x.ExamId == examId,
-                    s => s
-                    .SetProperty(x => x.Answers, studentAnswers)
-                    .SetProperty(x => x.Score, score)
-                    );
+            await _studentExamRepository.SaveChangesAsync(cancellationToken);
 
             return Result.Success();
         }
@@ -617,7 +639,7 @@ namespace ExaminationSystem.Services.ExamsService
                         .ToDictionary(c => c.QuestionId, c => c.Id);
 
             var reviewedQuestions = new List<ReviewedQuestionResponse>();
-            foreach(var examQuestion in exam.ExamQuestions)
+            foreach (var examQuestion in exam.ExamQuestions)
             {
                 var question = examQuestion.Question;
                 var studentAnswer = studentAnswersLookup[question.Id];

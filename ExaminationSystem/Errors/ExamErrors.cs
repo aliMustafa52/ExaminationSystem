@@ -31,6 +31,9 @@ namespace ExaminationSystem.Errors
         public static readonly Error ExamQuestionsMismatch =
             new("Exam.QuestiosMismatch", "Sent Questions don't match this exam questions", StatusCodes.Status400BadRequest);
 
+        public static readonly Error ExamInvalidChoiceSubmitted =
+            new("Exam.InvalidChoiceSubmitted", "Sent Choices don't match this exam questions", StatusCodes.Status400BadRequest);
+
         public static readonly Error ExamQuestionNumberMismatch =
             new("Exam.QuestionNumberMismatch", "Sent Number Of Questions are diffent from Exam Number of questions", StatusCodes.Status400BadRequest);
 

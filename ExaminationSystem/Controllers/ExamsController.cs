@@ -133,6 +133,31 @@ namespace ExaminationSystem.Controllers
                 : result.ToProblem();
         }
 
-        
+
+        [HttpPost("~/api/[controller]/{examId}/submit-exam")]
+        [Authorize]
+        public async Task<IActionResult> SubmitExam([FromRoute] int examId, [FromBody] SubmitExamRequest request, CancellationToken cancellationToken)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.SubmitExam(examId, studentId, request, cancellationToken);
+
+            return result.IsSuccess
+            ? NoContent()
+            : result.ToProblem();
+        }
+
+        [HttpGet("~/api/[controller]/{examId}/exam-review")]
+        [Authorize]
+        public async Task<IActionResult> GetExamReview([FromRoute] int examId, CancellationToken cancellationToken)
+        {
+            var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var result = await _examService.GetExamReview(examId, studentId, cancellationToken);
+
+            return result.IsSuccess
+            ? Ok(result.Value)
+            : result.ToProblem();
+        }
     }
 }

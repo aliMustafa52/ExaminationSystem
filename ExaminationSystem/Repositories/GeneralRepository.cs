@@ -149,5 +149,11 @@ namespace ExaminationSystem.Repositories
 
             return isMatch;
         }
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            // This will save ALL changes made to ANY entity tracked by this DbContext instance.
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

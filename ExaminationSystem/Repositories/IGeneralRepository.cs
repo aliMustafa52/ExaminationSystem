@@ -25,5 +25,8 @@ namespace ExaminationSystem.Repositories
         Task<bool> DeleteAsync(int id);
 
         Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
+
+
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

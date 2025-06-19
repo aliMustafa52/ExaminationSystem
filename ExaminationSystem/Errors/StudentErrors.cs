@@ -8,9 +8,9 @@ namespace ExaminationSystem.Errors
             new("Student.NotFound", "No Student was found with the given ID", StatusCodes.Status404NotFound);
 
         public static readonly Error StudentSubmitedExamBefore =
-            new("Student.SubmitedExamBefore", "this student submited this exam before", StatusCodes.Status404NotFound);
+            new("Student.SubmitedExamBefore", "this student submited this exam before", StatusCodes.Status400BadRequest);
 
         public static readonly Error StudentNotYetSubmittedForReview =
-            new("Student.NotYetSubmittedForReview", "This exam is Not Yet Submitted For Review", StatusCodes.Status404NotFound);
+            new("Student.NotYetSubmittedForReview", "This exam is Not Yet Submitted For Review", StatusCodes.Status400BadRequest);
     }
 }
